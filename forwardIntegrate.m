@@ -59,7 +59,8 @@ function [Y,U,t_total,t_update] = forwardIntegrate()
         % compute control inputs, and record the time consumption
         t_temp = toc(TIMER);
         %%%%%%%%%%%%%%%% THIS IS WHERE YOUR FUNCTION IS CALLED (replace in your team number). %%%%%%%%%%%%%%%%%%%%%%%%%%%
-        [Utemp, FLAG_terminate] = ROB535_ControlsProject_part2_Team<your team number>(TestTrack,Xobs_seen,curr_state); %%
+        %[Utemp, FLAG_terminate] = ROB535_ControlsProject_part2_Team<your team number>(TestTrack,Xobs_seen,curr_state); %%
+        [Utemp, FLAG_terminate] = ROB535_ControlsProject_part2_Team1(TestTrack,Xobs_seen,curr_state); %%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %         FLAG_terminate = randi(2)-1                                 % GSIs: This line is just for us to debug. Feel free to play with it if you want
 %         Utemp = rand(dt/0.01+1 + FLAG_terminate* (randi(10)-5),2);  % GSIs: This line is just for us to debug. Feel free to play with it if you want        
