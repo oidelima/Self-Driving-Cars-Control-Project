@@ -15,7 +15,8 @@ Y(1,:) = start_pos;
 % Window size when segmenting track
 N = 100;
 
-
+% Uncomment this section to check part 1:
+sol1 = forwardIntegrateControlInput(ROB535ControlsProjectpart1input)
 
 
 %for i = 1:N:size(cline_interp,2)-N+1
