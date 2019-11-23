@@ -15,7 +15,7 @@ ry = (ylim2-ylim1).*rand(10000,1) + ylim1;
 [leftNormals, rightNormals] = calcNormals(TestTrack.bl, TestTrack.br);
 % b = fitInequalConstraintToPoints(TestTrack.bl, 3)
 % g1 = 200^2 - (rx - 900).^2 - (ry - 300).^2;
-g2 = inequal([rx';ry'], TestTrack.bl, TestTrack.br, leftNormals, rightNormals);
+g2 = inequalityConstraintTrack([rx';ry'], TestTrack.bl, TestTrack.br);
 passmap = g2 < 0;
 failmap = g2 > 0;
 passpoints = [passmap .* rx'; passmap .* ry'; passmap .* g2];
@@ -48,17 +48,17 @@ end
 function g = inequal(pos, leftBound, rightBound, leftNormals, rightNormals)
     Idleft = knnsearch(leftBound', pos');
 	Idright = knnsearch(rightBound', pos');
-    
+
     rightCorr = rightBound(:, Idright');
     leftCorr = leftBound(:, Idleft');
-    
+
     rightVectors = pos - rightCorr;
     leftVectors = pos - leftCorr;
     rightNormalsCorr = rightNormals(:, Idright');
     leftNormalsCorr = leftNormals(:, Idleft');
-    
+
     g = -(dot(rightVectors, rightNormalsCorr, 1) .* dot(leftVectors, leftNormalsCorr, 1));
-    
+
     %rightDirVectors = rightBound(:, 2:n) - rightBound(:, 1:n-1);
     %leftDirVectors = leftBound(:, 2:n) - leftBound(:, 1:n-1);
 end
