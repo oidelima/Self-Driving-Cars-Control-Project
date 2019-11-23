@@ -8,10 +8,10 @@ load TestTrack.mat
 rng(0,'twister');
 xlim1 = 200;
 xlim2 = 1500;
-rx = (xlim2-xlim1).*rand(10000,1) + xlim1;
+rx = (xlim2-xlim1).*rand(100000,1) + xlim1;
 ylim1 = -200;
 ylim2 = 825;
-ry = (ylim2-ylim1).*rand(10000,1) + ylim1;
+ry = (ylim2-ylim1).*rand(100000,1) + ylim1;
 [leftNormals, rightNormals] = calcNormals(TestTrack.bl, TestTrack.br);
 % b = fitInequalConstraintToPoints(TestTrack.bl, 3)
 % g1 = 200^2 - (rx - 900).^2 - (ry - 300).^2;
