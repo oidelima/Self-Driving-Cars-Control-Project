@@ -1,5 +1,6 @@
 clear
 load TestTrack.mat
+load gridInequal.mat
 
 % Required timestep
 dt = 0.01;
