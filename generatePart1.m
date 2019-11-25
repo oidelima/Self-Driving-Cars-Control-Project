@@ -3,7 +3,7 @@ load TestTrack.mat
 load gridInequal.mat
 
 % Required timestep
-dt = 0.01;
+setGlobaldt(0.01);
 
 % States: z = [x; u; y; v; psi; r]
 z0 = [287; 5; -176; 0; 2; 0];
@@ -18,12 +18,90 @@ function setGlobaln(val)
 global n
 n = val;
 end
+function setGlobaldt(val)
+global dt
+dt = val;
+end
 function [g,h,dg,dh]=nonlcon(z)
     [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
+    
+    % Inequality Track Constraint, n x 1
     g = inequalityConstraintTrack([x,y]', TestTrack.bl, TestTrack.br)';
+    
+    % Inequality Constraint Gradient, (8n - 2) x n
     dg_dxy = torGradient(inequalityConstraintTrack, [x,y]', TestTrack.bl, TestTrack.br)';
     dg_c = mat2cell([dg_dxy(:,1), zeros(n,1), dg_dxy(:,2), zeros(n,3)]', [6], ones(1,n));
     dg = [blkdiag(dg_c{:}); zeros((n-1)*2, n)];
+    
+    % Equality Dynamics Constraint, (6n) x 1
+    % Equality Constraint Gradient, (8n - 2) x (6n)
+    % size of dh must be (8*n - 2), (6*n) = Transpose((no. of time steps * no. of states) x no. of elements in 'z') ;
+    h = reshape(z(1:6),[6,1]);
+    dh = zeros((8*n - 2), (6*n));
+    dh(1:6,1:6) = eye(6);
+    for i = 1:(n-1)
+        curr_state = [x(i+1);u(i+1);y(i+1);v(i+1);psi(i+1);r(i+1)];
+        prev_state = [x(i);u(i);y(i);v(i);psi(i);r(i)];
+        prev_input = [delta(i);Fx(i)];
+        h(6*i + 1:6*i + 6) = curr_state - prev_state - dt*bike_inst(prev_state, prev_input);
+        % Need to change -->>>
+        dh(3*i + 1:3*i + 3, 3*i + 1:3*i + 3) = eye(3);
+        dh(3*i - 2:3*i, 3*i + 1:3*i + 3) = -eye(3) - 0.05 * [0, 0, -u(i)*sin(phi(i))-(b/L)*u(i)*tan(del(i))*cos(phi(i));0, 0, u(i)*cos(phi(i))-(b/L)*u(i)*tan(del(i))*sin(phi(i)); 0, 0, 0]';
+        dh(363 + 2*i - 1:363 + 2*i, 3*i + 1:3*i + 3) = - 0.05 * [cos(phi(i))-(b/L)*tan(del(i))*sin(phi(i)), -(b/L)*u(i)*(sec(del(i))^2)*sin(phi(i)); sin(phi(i))+(b/L)*tan(del(i))*cos(phi(i)), (b/L)*u(i)*(sec(del(i))^2)*cos(phi(i)); (1/L)*tan(del(i)), (u(i)/L)*sec(del(i))^2]';
+    end
+    
+end
+
+function dzdt=bike_inst(x,u)
+%constants
+Nw=2;
+f=0.01;
+Iz=2667;
+a=1.35;
+b=1.45;
+By=0.27;
+Cy=1.2;
+Dy=0.7;
+Ey=-1.6;
+Shy=0;
+Svy=0;
+m=1400;
+g=9.806;
+
+delta_f=u(1);
+F_x=u(2);
+
+%slip angle functions in degrees
+a_f=rad2deg(delta_f-atan2(x(4)+a*x(6),x(2)));
+a_r=rad2deg(-atan2((x(4)-b*x(6)),x(2)));
+
+%Nonlinear Tire Dynamics
+phi_yf=(1-Ey)*(a_f+Shy)+(Ey/By)*atan(By*(a_f+Shy));
+phi_yr=(1-Ey)*(a_r+Shy)+(Ey/By)*atan(By*(a_r+Shy));
+
+F_zf=b/(a+b)*m*g;
+F_yf=F_zf*Dy*sin(Cy*atan(By*phi_yf))+Svy;
+
+F_zr=a/(a+b)*m*g;
+F_yr=F_zr*Dy*sin(Cy*atan(By*phi_yr))+Svy;
+
+F_total=sqrt((Nw*F_x)^2+(F_yr^2));
+F_max=0.7*m*g;
+
+if F_total>F_max
+    
+    F_x=F_max/F_total*F_x;
+  
+    F_yr=F_max/F_total*F_yr;
+end
+
+%vehicle dynamics
+dzdt= [x(2)*cos(x(5))-x(4)*sin(x(5));...
+          (-f*m*g+Nw*F_x-F_yf*sin(delta_f))/m+x(4)*x(6);...
+          x(2)*sin(x(5))+x(4)*cos(x(5));...
+          (F_yf*cos(delta_f)+F_yr)/m-x(2)*x(6);...
+          x(6);...
+          (F_yf*a*cos(delta_f)-F_yr*b)/Iz];
 end
 
 % HW 3 Trajectory Generation:
