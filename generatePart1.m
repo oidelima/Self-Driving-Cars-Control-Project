@@ -9,16 +9,21 @@ dt = 0.01;
 z0 = [287; 5; -176; 0; 2; 0];
 
 % Number of timesteps to use this iteration
-n = 500;
+setGlobaln(500);
 
 % Vector of inputs to be delivered for part 1; size (n, 2):
 % [delta1, Fx1; delta2, Fx2; ...]
 ROB535ControlsProjectpart1input = zeros(n,2);
-
+function setGlobaln(val)
+global n
+n = val;
+end
 function [g,h,dg,dh]=nonlcon(z)
     [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
     g = inequalityConstraintTrack([x,y]', TestTrack.bl, TestTrack.br)';
     dg_dxy = torGradient(inequalityConstraintTrack, [x,y]', TestTrack.bl, TestTrack.br)';
+    dg_c = mat2cell([dg_dxy(:,1), zeros(n,1), dg_dxy(:,2), zeros(n,3)]', [6], ones(1,n));
+    dg = [blkdiag(dg_c{:}); zeros((n-1)*2, n)];
 end
 
 % HW 3 Trajectory Generation:

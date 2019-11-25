@@ -1,8 +1,8 @@
 function [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z)
     % 8n + 6 = size(z,1)
-    n = (size(z, 1) - 6) / 8;
-    l1 = (n+1)*6;
-    l2 = n*2;
+    n_minus1 = (size(z, 1) - 6) / 8;
+    l1 = (n_minus1+1)*6;
+    l2 = n_minus1*2;
     z = reshape(z, [l1+l2,1]);
     x = z(1:6:l1);
     u = z(2:6:l1);
