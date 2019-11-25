@@ -1,3 +1,3 @@
 function dg = DinequalityConstraintTrack(pos, leftBound, rightBound)
-    dg = gradient(inequalityConstraintTrack(pos, leftBound, rightBound), 0.05);
+    dg = torGradient(inequalityConstraintTrack, pos, leftBound, rightBound);
 end

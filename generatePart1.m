@@ -15,6 +15,12 @@ n = 500;
 % [delta1, Fx1; delta2, Fx2; ...]
 ROB535ControlsProjectpart1input = zeros(n,2);
 
+function [g,h,dg,dh]=nonlcon(z)
+    [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
+    g = inequalityConstraintTrack([x,y]', TestTrack.bl, TestTrack.br)';
+    dg_dxy = torGradient(inequalityConstraintTrack, [x,y]', TestTrack.bl, TestTrack.br)';
+end
+
 % HW 3 Trajectory Generation:
 %{
 b = 1.5 ; 
