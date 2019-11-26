@@ -2,6 +2,9 @@ clear
 load TestTrack.mat
 global n dt leftBound rightBound
 
+% Number of timesteps to use this iteration
+setGlobaln(100);
+
 % Required timestep
 setGlobaldt(0.01);
 
@@ -21,16 +24,15 @@ lb = encodeColocationVector(lb_0(:,1), lb_0(:,2), lb_0(:,3), lb_0(:,4), lb_0(:,5
 leftBound = TestTrack.bl;
 rightBound = TestTrack.br;
 
-% Number of timesteps to use this iteration
-setGlobaln(5000);
-
 % Vector of inputs to be delivered for part 1; size (n, 2):
 % [delta1, Fx1; delta2, Fx2; ...]
 ROB535ControlsProjectpart1input = zeros(n,2);
 
 % Fmincon
 options = optimoptions('fmincon','SpecifyConstraintGradient',true,...
-                       'SpecifyObjectiveGradient',true) ;
+                       'SpecifyObjectiveGradient',true,...
+                       'MaxIterations',1500,...
+                       'Display', 'iter') ;
 x0=zeros(1,8*n-2)';
 cf=@costfun
 nc=@nonlcon
@@ -72,64 +74,12 @@ function [g,h,dg,dh]=nonlcon(z)
         curr_state = [x(i+1);u(i+1);y(i+1);v(i+1);psi(i+1);r(i+1)];
         prev_state = [x(i);u(i);y(i);v(i);psi(i);r(i)];
         prev_input = [delta_f(i);F_x(i)];
-        h(6*i + 1:6*i + 6) = curr_state - prev_state - dt*bike_inst(prev_state, prev_input);
+        h(6*i + 1:6*i + 6) = curr_state - prev_state - dt*bikeInst(prev_state, prev_input);
         dh(6*i + 1:6*i + 6, 6*i + 1:6*i + 6) = eye(6);
         dh(6*i - 5:6*i, 6*i + 1:6*i + 6) = -eye(6) - dt*jacobianDynamics(prev_state, prev_input, 1)';
         dh(6*n + 2*i - 1:6*n + 2*i, 6*i + 1:6*i + 6) = - dt*jacobianDynamics(prev_state, prev_input, 2)';
     end
     
-end
-
-function dzdt=bike_inst(x,u)
-%constants
-Nw=2;
-f=0.01;
-Iz=2667;
-a=1.35;
-b=1.45;
-By=0.27;
-Cy=1.2;
-Dy=0.7;
-Ey=-1.6;
-Shy=0;
-Svy=0;
-m=1400;
-g=9.806;
-
-delta_f=u(1);
-F_x=u(2);
-
-%slip angle functions in degrees
-a_f=rad2deg(delta_f-atan2(x(4)+a*x(6),x(2)));
-a_r=rad2deg(-atan2((x(4)-b*x(6)),x(2)));
-
-%Nonlinear Tire Dynamics
-phi_yf=(1-Ey)*(a_f+Shy)+(Ey/By)*atan(By*(a_f+Shy));
-phi_yr=(1-Ey)*(a_r+Shy)+(Ey/By)*atan(By*(a_r+Shy));
-
-F_zf=b/(a+b)*m*g;
-F_yf=F_zf*Dy*sin(Cy*atan(By*phi_yf))+Svy;
-
-F_zr=a/(a+b)*m*g;
-F_yr=F_zr*Dy*sin(Cy*atan(By*phi_yr))+Svy;
-
-F_total=sqrt((Nw*F_x)^2+(F_yr^2));
-F_max=0.7*m*g;
-
-if F_total>F_max
-    
-    F_x=F_max/F_total*F_x;
-  
-    F_yr=F_max/F_total*F_yr;
-end
-
-%vehicle dynamics
-dzdt= [x(2)*cos(x(5))-x(4)*sin(x(5));...
-          (-f*m*g+Nw*F_x-F_yf*sin(delta_f))/m+x(4)*x(6);...
-          x(2)*sin(x(5))+x(4)*cos(x(5));...
-          (F_yf*cos(delta_f)+F_yr)/m-x(2)*x(6);...
-          x(6);...
-          (F_yf*a*cos(delta_f)-F_yr*b)/Iz];
 end
 
 function [J, dJ] = costfun(z)
