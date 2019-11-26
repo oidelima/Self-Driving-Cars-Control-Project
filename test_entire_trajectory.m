@@ -16,12 +16,8 @@ start_input = [0.01, 0.01];
 Y(1,:) = start_pos;
 U(1,:) = start_input;
 
-% % Window size when segmenting track
-% M = 100;
-
 
 i = 1;
-%for i = 1:N:size(cline_interp,2)-N+1
 while ~close_to_end(Y(i,:),TestTrack)
     % Curr pos
     curr_state = Y(i,:);
