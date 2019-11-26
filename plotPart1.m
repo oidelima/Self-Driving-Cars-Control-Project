@@ -1,4 +1,5 @@
-%generatePart1
+clear
+generatePart1
 
 load TestTrack.mat
 
@@ -33,11 +34,14 @@ dg2 = torGradient(@inequalityConstraintTrack, [rx2;ry2], 0.05, TestTrack.bl, Tes
 hold on
 %plot3(failpoints(1,:), failpoints(2,:), failpoints(3,:), '.r')
 %For 2d plotting:
-s = surf(rx, ry, reshape(g2, size(rx)));
-s.EdgeColor = 'none';
-plot3(TestTrack.cline(1,:), TestTrack.cline(2,:), zeros(1,246), '--k')
-plot3(TestTrack.bl(1,:), TestTrack.bl(2,:), zeros(1,246), 'k')
-plot3(TestTrack.br(1,:), TestTrack.br(2,:), zeros(1,246), 'k')
+%s = surf(rx, ry, reshape(g2, size(rx)));
+%s.EdgeColor = 'none';
+
+[x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
+plot(x,y, 'ob')
+plot(TestTrack.cline(1,:), TestTrack.cline(2,:), '--k')
+plot(TestTrack.bl(1,:), TestTrack.bl(2,:), 'k')
+plot(TestTrack.br(1,:), TestTrack.br(2,:), 'k')
 %plot(sol1(:,1), sol1(:,3), 'b')
 xlim([xlim1,xlim2])
 ylim([ylim1,ylim2])
