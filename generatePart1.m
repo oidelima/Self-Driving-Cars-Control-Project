@@ -1,6 +1,6 @@
 clear
 load TestTrack.mat
-load gridInequal.mat
+global n dt
 
 % Required timestep
 setGlobaldt(0.01);
@@ -8,21 +8,48 @@ setGlobaldt(0.01);
 % States: z = [x; u; y; v; psi; r]
 z0 = [287; 5; -176; 0; 2; 0];
 
+% Bounds on states and inputs
+ub_0 = repmat([1500, 5000, 900, 5000, 3, 10], n, 1);
+ub_1 = repmat([0.5, 5000], n-1, 1);
+lb_0 = repmat([200, 0, -200, -5000, -3, -10], n, 1);
+lb_1 = repmat([-0.5, -5000], n-1, 1);
+
+ub = encodeColocationVector(ub_0(:,1), ub_0(:,2), ub_0(:,3), ub_0(:,4), ub_0(:,5), ub_0(:,6), ub_1(:,1), ub_1(:,2));
+lb = encodeColocationVector(lb_0(:,1), lb_0(:,2), lb_0(:,3), lb_0(:,4), lb_0(:,5), lb_0(:,6), lb_1(:,1), lb_1(:,2));
+
 % Number of timesteps to use this iteration
-setGlobaln(500);
+setGlobaln(5000);
 
 % Vector of inputs to be delivered for part 1; size (n, 2):
 % [delta1, Fx1; delta2, Fx2; ...]
 ROB535ControlsProjectpart1input = zeros(n,2);
-function setGlobaln(val)
-global n
-n = val;
-end
-function setGlobaldt(val)
-global dt
-dt = val;
-end
+
+% Fmincon
+options = optimoptions('fmincon','SpecifyConstraintGradient',true,...
+                       'SpecifyObjectiveGradient',true) ;
+x0=zeros(1,5*nsteps-2);
+cf=@costfun
+nc=@nonlcon
+z=fmincon(cf,x0,[],[],[],[],lb',ub',nc,options);
+
+Y0=reshape(z(1:3*nsteps),3,nsteps)';
+U=reshape(z(3*nsteps+1:end),2,nsteps-1);
+u=@(t) [interp1(0:dt:119*dt,U(1,:),t,'previous','extrap');...
+        interp1(0:dt:119*dt,U(2,:),t,'previous','extrap')];
+[T1,Y1]=ode45(@(t,x) odefun(x,u(t)),[0:dt:120*dt],[0 0 0]);
+[T2,Y2]=ode45(@(t,x) odefun(x,u(t)),[0:dt:120*dt],[0 0 -0.01]);
+plot(Y0(:,1),Y0(:,2),Y1(:,1),Y1(:,2),Y2(:,1),Y2(:,2))
+hold on
+plot(0,0,'x');
+legend('fmincon trajectory','ode45 trajectory using x0 = [0;0;0]',...
+    'ode45 trajectory using x0 = [0;0;-0.01]','Buffered Obstacle','Start');
+ylim([-2,2]);
+xlim([-1,8]);
+xlabel('x');
+ylabel('y');
+
 function [g,h,dg,dh]=nonlcon(z)
+    global n dt
     [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
     
     % Inequality Track Constraint, n x 1
@@ -44,10 +71,9 @@ function [g,h,dg,dh]=nonlcon(z)
         prev_state = [x(i);u(i);y(i);v(i);psi(i);r(i)];
         prev_input = [delta(i);Fx(i)];
         h(6*i + 1:6*i + 6) = curr_state - prev_state - dt*bike_inst(prev_state, prev_input);
-        % Need to change -->>>
-        dh(3*i + 1:3*i + 3, 3*i + 1:3*i + 3) = eye(3);
-        dh(3*i - 2:3*i, 3*i + 1:3*i + 3) = -eye(3) - 0.05 * [0, 0, -u(i)*sin(phi(i))-(b/L)*u(i)*tan(del(i))*cos(phi(i));0, 0, u(i)*cos(phi(i))-(b/L)*u(i)*tan(del(i))*sin(phi(i)); 0, 0, 0]';
-        dh(363 + 2*i - 1:363 + 2*i, 3*i + 1:3*i + 3) = - 0.05 * [cos(phi(i))-(b/L)*tan(del(i))*sin(phi(i)), -(b/L)*u(i)*(sec(del(i))^2)*sin(phi(i)); sin(phi(i))+(b/L)*tan(del(i))*cos(phi(i)), (b/L)*u(i)*(sec(del(i))^2)*cos(phi(i)); (1/L)*tan(del(i)), (u(i)/L)*sec(del(i))^2]';
+        dh(6*i + 1:6*i + 6, 6*i + 1:6*i + 6) = eye(6);
+        dh(6*i - 5:6*i, 6*i + 1:6*i + 6) = -eye(6) - dt*jacobianDynamics(prev_state, prev_input, 1);
+        dh(6*n + 2*i - 1:6*n + 2*i, 6*i + 1:6*i + 6) = - dt*jacobianDynamics(prev_state, prev_input, 2);
     end
     
 end
