@@ -5,6 +5,8 @@ for i = 1: length(length(TestTrack.bl(1,:)))
 end
 
 function g = inequalityConstraintTrack(pos, leftBound, rightBound)
+    upperbound = 10000;
+
     [leftNormals, rightNormals] = calcNormals(leftBound, rightBound);
     Idleft = knnsearch(leftBound', pos');
 	Idright = knnsearch(rightBound', pos');
@@ -16,8 +18,10 @@ function g = inequalityConstraintTrack(pos, leftBound, rightBound)
     leftVectors = pos - leftCorr;
     rightNormalsCorr = rightNormals(:, Idright');
     leftNormalsCorr = leftNormals(:, Idleft');
+    
 
     g = -(dot(rightVectors, rightNormalsCorr, 1) .* dot(leftVectors, leftNormalsCorr, 1));
+    %g = g_temp .* (g_temp < upperbound) + upperbound * (g_temp >= upperbound);
 end
 
 function [Lnormals, Rnormals] = calcNormals(pos,TestTrack.bl, TestTrack.br)

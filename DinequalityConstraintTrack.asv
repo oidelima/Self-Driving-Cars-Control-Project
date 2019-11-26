@@ -1,4 +1,0 @@
-function dg = DinequalityConstraintTrack(pos, leftBound, rightBound)
-    
-    dg = ;
-end
