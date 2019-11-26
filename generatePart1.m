@@ -1,6 +1,6 @@
 clear
 load TestTrack.mat
-global n dt
+global n dt leftBound rightBound
 
 % Required timestep
 setGlobaldt(0.01);
@@ -17,6 +17,10 @@ lb_1 = repmat([-0.5, -5000], n-1, 1);
 ub = encodeColocationVector(ub_0(:,1), ub_0(:,2), ub_0(:,3), ub_0(:,4), ub_0(:,5), ub_0(:,6), ub_1(:,1), ub_1(:,2));
 lb = encodeColocationVector(lb_0(:,1), lb_0(:,2), lb_0(:,3), lb_0(:,4), lb_0(:,5), lb_0(:,6), lb_1(:,1), lb_1(:,2));
 
+% Track boundaries
+leftBound = TestTrack.bl;
+rightBound = TestTrack.br;
+
 % Number of timesteps to use this iteration
 setGlobaln(5000);
 
@@ -27,36 +31,34 @@ ROB535ControlsProjectpart1input = zeros(n,2);
 % Fmincon
 options = optimoptions('fmincon','SpecifyConstraintGradient',true,...
                        'SpecifyObjectiveGradient',true) ;
-x0=zeros(1,5*nsteps-2);
+x0=zeros(1,8*n-2)';
 cf=@costfun
 nc=@nonlcon
 z=fmincon(cf,x0,[],[],[],[],lb',ub',nc,options);
 
-Y0=reshape(z(1:3*nsteps),3,nsteps)';
-U=reshape(z(3*nsteps+1:end),2,nsteps-1);
-u=@(t) [interp1(0:dt:119*dt,U(1,:),t,'previous','extrap');...
-        interp1(0:dt:119*dt,U(2,:),t,'previous','extrap')];
-[T1,Y1]=ode45(@(t,x) odefun(x,u(t)),[0:dt:120*dt],[0 0 0]);
-[T2,Y2]=ode45(@(t,x) odefun(x,u(t)),[0:dt:120*dt],[0 0 -0.01]);
+Y0=reshape(z(1:6*n),6,n)';
+U=reshape(z(6*n+1:end),2,n-1);
+u=@(t) [interp1(0:dt:(n-2)*dt,U(1,:),t,'previous','extrap');...
+        interp1(0:dt:(n-2)*dt,U(2,:),t,'previous','extrap')];
+[T1,Y1]=ode45(@(t,x) odefun(x,u(t)),[0:dt:(n-1)*dt],[0 0 0]);
+[T2,Y2]=ode45(@(t,x) odefun(x,u(t)),[0:dt:(n-1)*dt],[0 0 -0.01]);
 plot(Y0(:,1),Y0(:,2),Y1(:,1),Y1(:,2),Y2(:,1),Y2(:,2))
 hold on
 plot(0,0,'x');
 legend('fmincon trajectory','ode45 trajectory using x0 = [0;0;0]',...
     'ode45 trajectory using x0 = [0;0;-0.01]','Buffered Obstacle','Start');
-ylim([-2,2]);
-xlim([-1,8]);
 xlabel('x');
 ylabel('y');
 
 function [g,h,dg,dh]=nonlcon(z)
-    global n dt
-    [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z);
+    global n dt leftBound rightBound
+    [x, u, y, v, psi, r, delta_f, F_x] = decodeColocationVector(z);
     
     % Inequality Track Constraint, n x 1
-    g = inequalityConstraintTrack([x,y]', TestTrack.bl, TestTrack.br)';
+    g = inequalityConstraintTrack([x,y]', leftBound, rightBound)';
     
     % Inequality Constraint Gradient, (8n - 2) x n
-    dg_dxy = torGradient(inequalityConstraintTrack, [x,y]', TestTrack.bl, TestTrack.br)';
+    dg_dxy = torGradient(@inequalityConstraintTrack, [x,y]', 0.05, leftBound, rightBound)';
     dg_c = mat2cell([dg_dxy(:,1), zeros(n,1), dg_dxy(:,2), zeros(n,3)]', [6], ones(1,n));
     dg = [blkdiag(dg_c{:}); zeros((n-1)*2, n)];
     
@@ -69,11 +71,11 @@ function [g,h,dg,dh]=nonlcon(z)
     for i = 1:(n-1)
         curr_state = [x(i+1);u(i+1);y(i+1);v(i+1);psi(i+1);r(i+1)];
         prev_state = [x(i);u(i);y(i);v(i);psi(i);r(i)];
-        prev_input = [delta(i);Fx(i)];
+        prev_input = [delta_f(i);F_x(i)];
         h(6*i + 1:6*i + 6) = curr_state - prev_state - dt*bike_inst(prev_state, prev_input);
         dh(6*i + 1:6*i + 6, 6*i + 1:6*i + 6) = eye(6);
-        dh(6*i - 5:6*i, 6*i + 1:6*i + 6) = -eye(6) - dt*jacobianDynamics(prev_state, prev_input, 1);
-        dh(6*n + 2*i - 1:6*n + 2*i, 6*i + 1:6*i + 6) = - dt*jacobianDynamics(prev_state, prev_input, 2);
+        dh(6*i - 5:6*i, 6*i + 1:6*i + 6) = -eye(6) - dt*jacobianDynamics(prev_state, prev_input, 1)';
+        dh(6*n + 2*i - 1:6*n + 2*i, 6*i + 1:6*i + 6) = - dt*jacobianDynamics(prev_state, prev_input, 2)';
     end
     
 end
@@ -128,6 +130,16 @@ dzdt= [x(2)*cos(x(5))-x(4)*sin(x(5));...
           (F_yf*cos(delta_f)+F_yr)/m-x(2)*x(6);...
           x(6);...
           (F_yf*a*cos(delta_f)-F_yr*b)/Iz];
+end
+
+function [J, dJ] = costfun(z)
+    global n dt
+    [x, u, y, v, psi, r, delta_f, F_x] = decodeColocationVector(z);
+    input_cost = 0.25;
+    J = norm(x - 1471.899)^2 + norm(y - 817.773)^2 + input_cost*(norm(delta_f)^2 + norm(F_x)^2);
+    % size of dJ must be 1 x 603 (1 x no. of elements in 'z')
+    zero_vec = zeros(size(x,1),1);
+    dJ = encodeColocationVector(2*(x - 1471.899), zero_vec, 2*(y - 817.773), zero_vec, zero_vec, zero_vec, input_cost*2*delta_f, input_cost*2*F_x)';
 end
 
 % HW 3 Trajectory Generation:
