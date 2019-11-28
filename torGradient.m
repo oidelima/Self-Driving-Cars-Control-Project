@@ -1,7 +1,4 @@
 function dg = torGradient(func, points, step_size, varargin)
-    if nargin == 2
-        step_size = 0.05;
-    end
     center = func(points, varargin{1}, varargin{2});
     dg = zeros(size(points));
     for i=1:size(points,1)
