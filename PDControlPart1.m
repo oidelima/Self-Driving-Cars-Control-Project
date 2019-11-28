@@ -33,7 +33,7 @@ function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed)
         disp("Tracking point (out of 246) and iteration: ");
         disp([nearest_goal_id, i]);
         nearest_goal = centerLine(:, nearest_goal_id);
-        goal_state = [nearest_goal(1), 5, nearest_goal(2), 0, 0, 0];
+        goal_state = [nearest_goal(1), speed, nearest_goal(2), 0, 0, 0];
         error = goal_state - curr_state;
         goal_state(5) = centerLineTheta(:, nearest_goal_id) -.1*dot(Cnormals(:, nearest_goal_id), [error(1);error(3)], 1); %atan2(error(3),error(1));
         error = goal_state - curr_state;
