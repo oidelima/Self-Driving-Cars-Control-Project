@@ -15,11 +15,14 @@ function [z, startpts] = generateMultiplePart1(nsteps, niter, subdivision_num, g
     for iteration = 1:niter
         startpts(iteration, :) = [z0(1,1), z0(1,2), z0(1,3), z0(1,4), z0(1,5), z0(1,6)];
         x0 = encodeColocationVector(z0(:,1), z0(:,2), z0(:,3), z0(:,4), z0(:,5), z0(:,6), u0(:,1), u0(:,2));
+        iteration
+        tic
         z_out = generatePart1(nsteps, x0, subdivision_num, gradient_precision);
+        toc
     
         [x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z_out);
         z0 = repmat([x(end,1), u(end,1), y(end,1), v(end,1), psi(end,1), r(end,1)], n, 1);
-        u0 = repmat([delta(end,1), max(Fx)], n-1, 1);
+        u0 = repmat([delta(end,1), Fx(end,1)], n-1, 1);
 
         if iteration==niter
             x_total = [x_total;x(1:end)];

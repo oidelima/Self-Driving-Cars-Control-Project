@@ -15,10 +15,6 @@ gradient_precision = gradient_prec;
 % Set initial values for equality constraint
 curr_x0 = x0(1:6,1);
 
-% Use precomputed values for functions
-precompFlag = 0;
-%precomputeFunctions();
-
 % Store precomputed symbolic jacobian saturation threshold
 m = 1400;
 g = 9.806;
@@ -93,15 +89,19 @@ function [J, dJ] = costfun(z)
     global n dt centerLine precompFlag Jdata Jvals dJdata dJvals input_cost gradient_precision
     [x, u, y, v, psi, r, delta_f, F_x] = decodeColocationVector(z);
     if precompFlag == 1
-        %J = griddatan(Jdata, Jvals, [x,u,y,v,psi_,r,delta_f,F_x]);
-        %dJ = griddatan(dJdata, dJvals, [x,u,y,v,psi_,r,delta_f,F_x]);
+        Xq = repmat(x', size(y, 1), 1);
+        Yq = repmat(y, 1, size(x, 1));
+        J_grid = interp2(Jdata{1}, Jdata{2}, Jdata{3}, Xq, Yq, 'linear', 10000);
+        J_xy = diag(J_grid);
+        dJ_grid1 = interp2(dJdata{1}, dJdata{2}, dJdata{3}, Xq, Yq, 'linear', 10000);
+        dJ_grid2 = interp2(dJdata{1}, dJdata{2}, dJdata{4}, Xq, Yq, 'linear', 10000);
+        dJ_dxy = [diag(dJ_grid1), diag(dJ_grid2)];
+    else
+        J_xy = costFunctionTrack([x,y]',centerLine, 1);
+        dJ_dxy = torGradient(@costFunctionTrack, [x,y]', gradient_precision(2), centerLine, 1)';
     end
-    %J = norm(x - 1471.899)^2 + norm(y - 817.773)^2 + input_cost*(norm(delta_f)^2 + norm(F_x)^2);
-    J = costFunctionTrack([x,y]',centerLine, 1) + input_cost*(norm(delta_f)^2 + norm(F_x)^2);
-    % size of dJ must be 1 x 603 (1 x no. of elements in 'z')
+    J = sum(J_xy) + input_cost*(norm(delta_f)^2 + norm(F_x)^2);
     zero_vec = zeros(size(x,1),1);
-    dJ_dxy = torGradient(@costFunctionTrack, [x,y]', gradient_precision(2), centerLine, 1)';
-    %dJ = encodeColocationVector(2*(x - 1471.899), zero_vec, 2*(y - 817.773), zero_vec, zero_vec, zero_vec, input_cost*2*delta_f, input_cost*2*F_x)';
     dJ = encodeColocationVector(dJ_dxy(:,1), zero_vec, dJ_dxy(:,2), zero_vec, zero_vec, zero_vec, input_cost*2*delta_f, input_cost*2*F_x)';
 end
 

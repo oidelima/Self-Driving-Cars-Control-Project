@@ -1,0 +1,44 @@
+function [x, u, y, v, psi, r, delta, Fx] = PDControlPart1(nsteps, x0, subdivision_num, lookahead)
+    load TestTrack.mat
+    % Track boundaries
+    leftBound = TestTrack.bl;
+    rightBound = TestTrack.br;
+    centerLine = TestTrack.cline;
+    centerLineTheta = TestTrack.theta;
+    for i=1:subdivision_num
+        centerLine = subdivideTrack(centerLine);
+        centerLineTheta = subdivideTrack(centerLineTheta);
+    end
+    
+    kp = 0.1;
+    
+    % Required timestep
+    setGlobaldt(0.01);
+    
+    curr_state = x0;
+    n_elements = size(centerLine, 2);
+    projectors = (centerLine(:,2:n_elements) - centerLine(:,1:n_elements-1));
+    projectors = projectors ./ vecnorm(projectors);
+    
+    for i=1:nsteps
+        nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);
+        if nearest_goal_id > size(centerLine, 2)
+            nearest_goal_id = size(centerLine, 2);
+        end
+        nearest_goal = centerLine(:, nearest_goal_id);
+        goal_theta = centerLineTheta(:, nearest_goal_id);
+        goal_state = [nearest_goal(1), 0, nearest_goal(2), 0, 0, 0];
+        error = goal_state - curr_state;
+        goal_theta = atan2(error(1),error(3));
+        error(5) = goal_theta - curr_state(5);
+        delta_f = kp * error(5);
+        if delta_f > 0.5
+            delta_f = 0.5;
+        end
+        if delta_f < -0.5
+            delta_f = -0.5;
+        end
+        Fx = 1;
+        disp(
+    end
+end
