@@ -21,7 +21,9 @@ x0 = encodeColocationVector(z0(:,1), z0(:,2), z0(:,3), z0(:,4), z0(:,5), z0(:,6)
 %[x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z_out);
 tic
 num_pts = 40000;
-[Yplot, U] = PDControlPart1(num_pts, z0(1,:), 1, 10);
+gains = [0.5, 100];
+speed = 6;
+[Yplot, U] = PDControlPart1(num_pts, z0(1,:), gains, speed);
 toc
 x = Yplot(:,1);
 y = Yplot(:,3);
@@ -37,11 +39,10 @@ plot3(x_g,y_g, height_vis, 'o-g')
 plot(x,y, 'o-b')
 %plot(breakpts(:,1),breakpts(:,3), 'ob')
 
-ROB535ControlsProjectpart1input = [delta, Fx];
-disp("beginning the long haul (instructors code is slooooow)...")
-[sol1, T] = forwardIntegrateControlInput(ROB535ControlsProjectpart1input);
+ROB535_ControlsProject_part1_input = [delta, Fx];
+save('ROB535_ControlsProject_part1_Team1.mat','ROB535_ControlsProject_part1_input')
+[sol1, T] = forwardIntegrateControlInput(ROB535_ControlsProject_part1_input);
 plot(sol1(:,1), sol1(:,3), '.r')
-T = 1:0.01:0.01*(num_pts+1);
 
 load TestTrack.mat
 plot(TestTrack.cline(1,:), TestTrack.cline(2,:), '--k')

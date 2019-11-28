@@ -1,4 +1,4 @@
-function [Y_checking, U] = PDControlPart1(nsteps, x0, subdivision_num, lookahead)
+function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed)
     load TestTrack.mat
     % Track boundaries
     leftBound = TestTrack.bl;
