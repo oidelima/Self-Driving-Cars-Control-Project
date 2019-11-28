@@ -38,8 +38,9 @@ plot(x,y, 'o-b')
 %plot(breakpts(:,1),breakpts(:,3), 'ob')
 
 ROB535ControlsProjectpart1input = [delta, Fx];
-%[sol1, T] = forwardIntegrateControlInput(ROB535ControlsProjectpart1input);
-%plot(sol1(:,1), sol1(:,3), '.r')
+disp("beginning the long haul (instructors code is slooooow)...")
+[sol1, T] = forwardIntegrateControlInput(ROB535ControlsProjectpart1input);
+plot(sol1(:,1), sol1(:,3), '.r')
 T = 1:0.01:0.01*(num_pts+1);
 
 load TestTrack.mat

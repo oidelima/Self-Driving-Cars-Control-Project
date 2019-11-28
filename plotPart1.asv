@@ -20,7 +20,7 @@ x0 = encodeColocationVector(z0(:,1), z0(:,2), z0(:,3), z0(:,4), z0(:,5), z0(:,6)
 %[z_out, breakpts] = generateMultiplePart1(n, niter, subdivision_num, gradient_precision);
 %[x, u, y, v, psi, r, delta, Fx] = decodeColocationVector(z_out);
 tic
-num_pts = 1000;
+num_pts = 40000;
 [Yplot, U] = PDControlPart1(num_pts, z0(1,:), 1, 10);
 toc
 x = Yplot(:,1);
@@ -38,8 +38,9 @@ plot(x,y, 'o-b')
 %plot(breakpts(:,1),breakpts(:,3), 'ob')
 
 ROB535ControlsProjectpart1input = [delta, Fx];
-%[sol1, T] = forwardIntegrateControlInput(ROB535ControlsProjectpart1input);
-%plot(sol1(:,1), sol1(:,3), '.r')
+disp("beginn
+[sol1, T] = forwardIntegrateControlInput(ROB535ControlsProjectpart1input);
+plot(sol1(:,1), sol1(:,3), '.r')
 T = 1:0.01:0.01*(num_pts+1);
 
 load TestTrack.mat
@@ -54,6 +55,6 @@ hold on
 plot(Yplot(:, 5), '.-b');
 plot(Yplot(:, 5+6), '.-r');
 plot(Yplot(:, 5+12), '.-k');
-plot(Yplot(:, 5), '.-b');
-plot(Yplot(:, 5+6), '.-r');
-plot(Yplot(:, 5+12), '.-k');
+plot(Yplot(:, 2), 'o-b');
+plot(Yplot(:, 2+6), 'o-r');
+plot(Yplot(:, 2+12), 'o-k');

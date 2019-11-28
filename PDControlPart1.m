@@ -30,12 +30,8 @@ function [Y_checking, U] = PDControlPart1(nsteps, x0, subdivision_num, lookahead
 
     for i=1:nsteps
         nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);% + lookahead;
-        disp("Tracking point: ");
+        disp("Tracking point (out of 246) and iteration: ");
         disp([nearest_goal_id, i]);
-        if nearest_goal_id > size(centerLine, 2)
-            disp("Almost there!!!!!!!!!");
-            nearest_goal_id = size(centerLine, 2);
-        end
         nearest_goal = centerLine(:, nearest_goal_id);
         goal_state = [nearest_goal(1), 5, nearest_goal(2), 0, 0, 0];
         error = goal_state - curr_state;
