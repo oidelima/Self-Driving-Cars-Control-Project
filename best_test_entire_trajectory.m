@@ -1,9 +1,9 @@
 clear
 load TestTrack.mat
-num_passed = 0;
+num_passed = 0
 
 % Interpolate Test Track?
-num_interpl = 500 % 5000; % 100 % 1000
+num_interpl = 5000; % 100 % 1000
 cline_interp = interp_cline(TestTrack.cline, num_interpl);
 % plot(TestTrack.cline(1,:), TestTrack.cline(2,:) )
 % hold on
@@ -52,14 +52,14 @@ end
 
 function U = getControlInput(curr_state, curr_input,TestTrack,cline_interp,N)
     % Calculate loss and derivative of loss with respect to input
-    [L, dL_dU] = lossfun(curr_state, curr_input,TestTrack,cline_interp);
+    [L, dL_dU] = bestlossfun(curr_state, curr_input,TestTrack,cline_interp);
     L;
     
     % Learning rate. Can tune
-    eta = 3; % 3 best; %.5 % .3; % .1;% .3; % 10; % 1.8; % .5 gets closer to end % 300 still slowly gets better
+    eta = 3; %.5 % .3; % .1;% .3; % 10; % 1.8; % .5 gets closer to end % 300 still slowly gets better
     
     % Gradient Descent N steps, all the same
-%     U = ones(N,1) * (curr_input - eta * dL_dU);
+    % U = ones(N,1) * (curr_input - eta * dL_dU);
     
     % Simulate N times in that direction
     U(1,:) = (curr_input - eta * dL_dU);
@@ -74,7 +74,7 @@ function is_close = close_to_end(curr_state,TestTrack)
     y = curr_state(3);
     last_point = TestTrack.cline(:,end);
     dist = norm(last_point-[x;y]);
-    is_close = ( dist < 10 );
+    is_close = ( dist < 20 );
 end
 
 

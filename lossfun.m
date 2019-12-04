@@ -2,8 +2,8 @@ function [L, dL_dU] = lossfun(curr_state, curr_input, TestTrack, cline_interp) %
     x = curr_state(1);
     y = curr_state(3);
 
-    L = hill(x,y, TestTrack, cline_interp);
-    %L = hill2(x,y, TestTrack, cline_interp);
+    %L = hill(x,y, TestTrack, cline_interp);
+    L = hill2(x,y, TestTrack, cline_interp);
     
     hill_step = .1; % .05;
     dL_dxy = gradientHill(x,y,TestTrack,cline_interp, hill_step);
@@ -65,7 +65,7 @@ function [L, dL_dU] = lossfun(curr_state, curr_input, TestTrack, cline_interp) %
     
 end
 
-% function z = hill2(x,y, TestTrack, cline_interp)
+function z = hill2(x,y, TestTrack, cline_interp)
 %     pos = [x;y];
 %     leftBound = TestTrack.bl;
 %     rightBound = TestTrack.br;
@@ -82,45 +82,54 @@ end
 %     leftNormalsCorr = leftNormals(:, Idleft');
 % 
 %     z1 = -(dot(rightVectors, rightNormalsCorr, 1) .* dot(leftVectors, leftNormalsCorr, 1)); % * 10^6;
-%     
-%     % N = size(TestTrack.cline, 2);
-%     N = size(cline_interp, 2);
-%     %xy_rep = repmat([x;y], 1, N);
-% %     [~,left_bound_ind] = min(norm(TestTrack.bl-xy_rep));
-% %     left_bound = TestTrack.bl(left_bound_ind);
-% %     [~,right_bound_ind] = min(norm(TestTrack.br-xy_rep));
-% %     right_bound = TestTrack.br(right_bound_ind);
-%     diff_norms = zeros(1,N);
-%     for i = 1:N
-%         diff_norms(i) = norm(cline_interp(:,i)-[x;y]);
-%     end
-%     [~,cline_ind] = min(diff_norms);
-% %     cpoint = TestTrack.cline(cline_ind+1);
-% %     next_cpoint = TestTrack.cline(cline_ind + 2);
-% %     next_next_cpoint = TestTrack.cline(cline_ind + 3);
-% 
-%      z2 = N - cline_ind;  %;
-%      progress_bar = 100*(cline_ind / N)
-%      
+    
+    % N = size(TestTrack.cline, 2);
+    N = size(cline_interp, 2);
+    %xy_rep = repmat([x;y], 1, N);
+%     [~,left_bound_ind] = min(norm(TestTrack.bl-xy_rep));
+%     left_bound = TestTrack.bl(left_bound_ind);
+%     [~,right_bound_ind] = min(norm(TestTrack.br-xy_rep));
+%     right_bound = TestTrack.br(right_bound_ind);
+    diff_norms = zeros(1,N);
+    for i = 1:N
+        diff_norms(i) = norm(cline_interp(:,i)-[x;y]);
+    end
+    [~,cline_ind] = min(diff_norms);
+%     cpoint = TestTrack.cline(cline_ind+1);
+%     next_cpoint = TestTrack.cline(cline_ind + 2);
+%     next_next_cpoint = TestTrack.cline(cline_ind + 3);
+
+     z2 = (N - cline_ind); % / N;  %;
+     progress_bar = 100*(cline_ind / N)
+     
 %      z3 = norm(cline_interp(:,cline_ind+100) - [x;y] );
-%     
-%     % z2 = 2*norm([x;y] - cpoint)^2 + 5*norm([x;y] - next_cpoint)^2 + 5*norm([x;y] - next_next_cpoint)^2;
-%     % z2 = sqrt(z2)/10;% /10;
-% 
-%     % z = z1 + z2;
-%     z = 10000*z1 + z2 + z3*10000; % was times
-%     z = 1000000*z1 + z2 + z3*100000; % was times
-% end
-% 
-% function [Lnormals, Rnormals] = calcNormals(leftBound, rightBound)
-%     n = size(leftBound, 2); % 246
-%     dLeft = leftBound(:,2:n) - leftBound(:,1:n-1);
-%     dRight = rightBound(:,2:n) - rightBound(:,1:n-1);
-%     Lnormals = [0, -1; 1, 0] * (dLeft ./ vecnorm(dLeft));
-%     Lnormals(:,n) = Lnormals(:,n - 1);
-%     Rnormals = [0, 1; -1, 0] * (dRight ./ vecnorm(dRight));
-%     Rnormals(:,n) = Rnormals(:,n - 1);
-% end
+    
+    % z2 = 2*norm([x;y] - cpoint)^2 + 5*norm([x;y] - next_cpoint)^2 + 5*norm([x;y] - next_next_cpoint)^2;
+    % z2 = sqrt(z2)/10;% /10;
+
+    % z = z1 + z2;
+    %z = 10000*z1 + z2 + z3*10000; % was times
+    % z = 10000000*z1 + z2 + z3*100000; % was times
+    
+    closest_center = cline_interp(:,cline_ind);
+    z4 = norm([x;y] - closest_center)
+    
+    
+    
+    % z = z2; % + z4/2000000000000; %/20;
+    
+    z = z2 + 900*z4; % 500 okayish, 700 better
+end
+
+function [Lnormals, Rnormals] = calcNormals(leftBound, rightBound)
+    n = size(leftBound, 2); % 246
+    dLeft = leftBound(:,2:n) - leftBound(:,1:n-1);
+    dRight = rightBound(:,2:n) - rightBound(:,1:n-1);
+    Lnormals = [0, -1; 1, 0] * (dLeft ./ vecnorm(dLeft));
+    Lnormals(:,n) = Lnormals(:,n - 1);
+    Rnormals = [0, 1; -1, 0] * (dRight ./ vecnorm(dRight));
+    Rnormals(:,n) = Rnormals(:,n - 1);
+end
 
 function z = hill(x,y, TestTrack, cline_interp)
     P = [x;y];
@@ -137,7 +146,7 @@ function z = hill(x,y, TestTrack, cline_interp)
     next_cpoint = cline_interp(:,cline_ind+5);
     next_next_cpoint = cline_interp(:,cline_ind+10);
     
-    z = 50*norm(P - cpoint)^2 + 25*norm(P - next_cpoint)^2 + norm(P - next_next_cpoint)^2;
+    z = 1*norm(P - cpoint)^2 + 25*norm(P - next_cpoint)^2 + 50*norm(P - next_next_cpoint)^2;
     
     N = size(TestTrack.cline, 2);
     diff_norms_bl = zeros(1,N);
@@ -160,7 +169,7 @@ function z = hill(x,y, TestTrack, cline_interp)
 %         disp("Outside barrier Right")
 %     end
     
-    z
+    z;
     
     %z = inequalityConstraintTrack([x;y], left_bound, right_bound)
     %     xy_rep = repmat([x;y], 1, N);
@@ -172,8 +181,8 @@ function z = hill(x,y, TestTrack, cline_interp)
 end
 
 function dg = gradientHill(x,y,TestTrack,cline_interp,step_size)
-    f = @(x,y) hill(x,y,TestTrack,cline_interp) ;
-    %f = @(x,y) hill2(x,y,TestTrack,cline_interp) ;
+    %f = @(x,y) hill(x,y,TestTrack,cline_interp) ;
+    f = @(x,y) hill2(x,y,TestTrack,cline_interp) ;
     [df_dx, df_dy] = brianNumGradient(f,x,y,step_size);
     dg = [df_dx df_dy];
 end
