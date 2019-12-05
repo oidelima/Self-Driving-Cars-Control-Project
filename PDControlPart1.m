@@ -1,4 +1,4 @@
-function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed)
+function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed_ext, lookahead, centerline_strength)
     load TestTrack.mat
     % Track boundaries
     leftBound = TestTrack.bl;
@@ -12,8 +12,12 @@ function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed)
     end
     %}
     
-    kp1 = 0.5;
-    kp2 = 1000;
+    kp1 = gains(1,1);
+    ki1 = gains(2,1);
+    kd1 = gains(3,1);
+    kp2 = gains(1,2);
+    ki2 = gains(2,2);
+    kd2 = gains(3,2);
     
     % Required timestep
     setGlobaldt(0.01);
@@ -25,34 +29,69 @@ function [Y_checking, U] = PDControlPart1(nsteps, x0, gains, speed)
     Cnormals = [0, 1; -1, 0] * projectors;
     Cnormals(:,n_elements) = Cnormals(:,n_elements - 1);
 
+    sum_error = zeros(1,6);
+    prev_error = zeros(1,6);
     U = [0, 0];
     Y_checking = [];
+    simulation_divergence = zeros(1,6);
+    
+    cline_distances = vecnorm(centerLine(:, 2:end) - centerLine(:, 1:end-1));
+    cline_distances(:,n_elements) = cline_distances(:,n_elements - 1);
+    d_ext = [min(cline_distances), max(cline_distances)];
+    
+    d_theta = 1./ abs(centerLineTheta(:, 2:end) - centerLineTheta(:, 1:end-1));
+    d_theta(:,n_elements) = d_theta(:,n_elements - 1);
+    d_theta_ext = [min(d_theta), max(d_theta)];
 
     for i=1:nsteps
-        nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);% + lookahead;
+        nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);
+        lookahead_goal_id = nearest_goal_id + lookahead;
+        if lookahead_goal_id > size(centerLine, 2)
+            lookahead_goal_id = size(centerLine, 2);
+        end
         disp("Tracking point (out of 246) and iteration: ");
         disp([nearest_goal_id, i]);
         nearest_goal = centerLine(:, nearest_goal_id);
-        goal_state = [nearest_goal(1), speed, nearest_goal(2), 0, 0, 0];
+        length_scale = (d_theta(:, nearest_goal_id) - d_theta_ext(1))/(d_theta_ext(2) - d_theta_ext(1));
+        goal_speed = length_scale * (speed_ext(2) - speed_ext(1)) + speed_ext(1);
+        goal_state = [nearest_goal(1), goal_speed, nearest_goal(2), 0, 0, 0];
         error = goal_state - curr_state;
-        goal_state(5) = centerLineTheta(:, nearest_goal_id) -.1*dot(Cnormals(:, nearest_goal_id), [error(1);error(3)], 1); %atan2(error(3),error(1));
+        goal_state(5) = centerLineTheta(:, lookahead_goal_id) -centerline_strength*dot(Cnormals(:, nearest_goal_id), [error(1);error(3)], 1); %atan2(error(3),error(1));
         error = goal_state - curr_state;
-        delta_f = kp1 * error(5);
+        sum_error = sum_error + error;
+        d_error = (error - prev_error)/0.01;
+        delta_f = kp1 * error(5) + ki1 * sum_error(5) + kd1 * d_error(5);
+        Fx = kp2 * error(2) + ki2 * sum_error(2) + kd2 * d_error(2);
         if delta_f > 0.5
             delta_f = 0.5;
         end
         if delta_f < -0.5
             delta_f = -0.5;
         end
-        Fx = kp2 * error(2);
         %Solve for trajectory
         T=(i-1)*0.01:0.01:i*0.01;
         U = [U;[delta_f, Fx]];
         U_sim = U(end-1:end, :);
-        x0 = curr_state;
-        [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,x0);
+        if mod(i,1000) == 999
+            [Y,~]=forwardIntegrateControlInput(U,x0);
+            [~,Y1]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
+            simulation_divergence = Y(end,:)-Y1(end,:);
+        else
+            [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
+        end
         curr_state = Y(end,:);
-        Y_checking = [Y_checking; [curr_state, goal_state, error, ]];
+        Y_checking = [Y_checking; [curr_state, goal_state, error, simulation_divergence]];
+        prev_error = error;
+        if passedGoal(curr_state(1), curr_state(3))
+            break
+        end
+    end
+end
+
+function bool_out = passedGoal(x, y)
+    bool_out = 0;
+    if 61*x + 220*y + 269697 < 0
+        bool_out = 1;
     end
 end
 
