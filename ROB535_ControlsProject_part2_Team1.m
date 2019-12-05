@@ -3,9 +3,9 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     rightBound = TestTrack.br;
     centerLine = TestTrack.cline;
     
-    dist_obs_x = 
-    dist_obs_y = 
-    dot(Cnormals(:, nearest_obs_id), [dist_obs_x;dist_obs_y], 1);
+    %dist_obs_x = 
+    %dist_obs_y = 
+    %dot(Cnormals(:, nearest_obs_id), [dist_obs_x;dist_obs_y], 1);
     
     
     % To-do: Change centerline to avg between center line and proper
@@ -111,7 +111,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
             FLAG_terminate = 1;
             %last_input = U(end,:);
             last_input = [0, 4000]
-            for i = 1:1000
+            for i = 1:100
                 U = [U;last_input];
             end
             sol_2 = U;
