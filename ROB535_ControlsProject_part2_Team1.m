@@ -256,7 +256,8 @@ function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)
                 closest_obstacle_center = obstacle_center;
             end
         end
-        
+        %hold on;
+        %scatter(closest_obstacle_center(1), closest_obstacle_center(2));
     end
 end
 
