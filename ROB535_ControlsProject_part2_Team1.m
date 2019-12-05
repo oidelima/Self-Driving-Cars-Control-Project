@@ -1,7 +1,49 @@
 function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack,Xobs_seen,curr_state)
-    leftBound = TestTrack.bl;
-    rightBound = TestTrack.br;
-    centerLine = TestTrack.cline;
+%     leftBound = TestTrack.bl;
+%     rightBound = TestTrack.br;
+%     centerLine = TestTrack.cline;
+    
+    
+    %Xobs_seen
+    
+    closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+    
+    centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
+    
+    
+    
+%     num_cells = numel(Xobs_seen);
+%     if num_cells == 0
+%         centerLine = TestTrack.cline;
+%         disp("NO CELLS!");
+%     else
+%         min_dist = 999999;
+%         %min_dist_obstacle_idx = 0;
+%         closest_obstacle_center = [0;0];
+%         for i = 1:num_cells
+%             %bstacle_center = [0;0];
+%             obstacle = Xobs_seen{i};
+%             obstacle_center = mean(obstacle)
+%             %for j = 1:4
+%             %    obstacle_center = obstacle_center + obstacle(j,:);
+%             %end
+%             %obstacle_center = obstacle_center./4;
+%             obstacle_dist = norm(obstacle_center - [curr_state(1); curr_state(3)]);
+%             if obstacle_dist < min_dist
+%                 min_dist = obstacle_dist;
+%                 %min_dist_obstacle_idx = i;
+%                 closest_obstacle_center = obstacle_center;
+%             end
+%         end
+%         % Now we have closest obstacle index
+%         closest_obstacle_center 
+%         
+%         hold on;
+%         scatter(closest_obstacle_center(1), closest_obstacle_center(2))
+%         
+%     end
+    
+    
     
     %dist_obs_x = 
     %dist_obs_y = 
@@ -72,8 +114,8 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         if lookahead_goal_id > size(centerLine, 2)
             lookahead_goal_id = size(centerLine, 2);
         end
-        disp("Tracking point (out of 246) and iteration: ");
-        disp([nearest_goal_id, i]);
+        %disp("Tracking point (out of 246) and iteration: ");
+        %disp([nearest_goal_id, i]);
         nearest_goal = centerLine(:, nearest_goal_id);
         length_scale = (d_theta(:, nearest_goal_id) - d_theta_ext(1))/(d_theta_ext(2) - d_theta_ext(1));
         goal_speed = length_scale * (speed_ext(2) - speed_ext(1)) + speed_ext(1);
@@ -110,7 +152,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         if close_to_end(curr_state, TestTrack)
             FLAG_terminate = 1;
             %last_input = U(end,:);
-            last_input = [0, 4000]
+            last_input = [0, 4000];
             for i = 1:100
                 U = [U;last_input];
             end
@@ -187,6 +229,70 @@ function is_close = close_to_end(curr_state,TestTrack)
     last_point = TestTrack.cline(:,end);
     dist = norm(last_point-[x;y]);
     is_close = ( dist < 2 );
+end
+
+function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)
+    num_cells = numel(Xobs_seen);
+    if num_cells == 0
+        closest_obstacle_center = [0;0];
+        %centerLine = TestTrack.cline;
+        disp("NO CELLS!");
+    else
+        min_dist = 999999;
+        %min_dist_obstacle_idx = 0;
+        
+        for i = 1:num_cells
+            %bstacle_center = [0;0];
+            obstacle = Xobs_seen{i};
+            obstacle_center = mean(obstacle)';
+            %for j = 1:4
+            %    obstacle_center = obstacle_center + obstacle(j,:);
+            %end
+            %obstacle_center = obstacle_center./4;
+            obstacle_dist = norm(obstacle_center - [curr_state(1); curr_state(3)]);
+            if obstacle_dist < min_dist
+                min_dist = obstacle_dist;
+                %min_dist_obstacle_idx = i;
+                closest_obstacle_center = obstacle_center;
+            end
+        end
+        
+    end
+end
+
+function centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack)
+    if closest_obstacle_center == [0;0]
+        disp("Center")
+        centerLine = TestTrack.cline;
+    else
+        
+        n_elements = size(TestTrack.cline, 2);
+        projectors = (TestTrack.cline(:,2:n_elements) - TestTrack.cline(:,1:n_elements-1));
+        projectors = projectors ./ vecnorm(projectors);
+        Cnormals = [0, 1; -1, 0] * projectors;
+        Cnormals(:,n_elements) = Cnormals(:,n_elements - 1);
+        
+        % needs to take in centerLine and Cnormals
+        % pos_obs needs to be row for knn to work
+        cline_idx = knnsearch(TestTrack.cline', closest_obstacle_center');
+        obs_vec = TestTrack.cline(:,cline_idx) - closest_obstacle_center;
+        norm_vec = Cnormals(:,cline_idx);
+        sign_check = dot(obs_vec, norm_vec);
+        if sign_check >= 0
+            disp("Right")
+            centerLine = (TestTrack.br + TestTrack.cline)./2;
+        else
+            disp("Left")
+            centerLine = (TestTrack.bl + TestTrack.cline)./2;
+        end
+        % positive = RHS
+        % negative = LHS
+
+
+        
+        % for testing
+        %centerLine = TestTrack.cline;
+    end
 end
 
 % %function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack,Xobs_seen,curr_state)
