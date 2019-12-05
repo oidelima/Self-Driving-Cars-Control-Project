@@ -2,17 +2,38 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     leftBound = TestTrack.bl;
     rightBound = TestTrack.br;
     centerLine = TestTrack.cline;
+    
+    dist_obs_x = 
+    dist_obs_y = 
+    dot(Cnormals(:, nearest_obs_id), [dist_obs_x;dist_obs_y], 1);
+    
+    
+    % To-do: Change centerline to avg between center line and proper
+    % boundary. e.g. centerline = rightlane
+    
     centerLineTheta = TestTrack.theta;
-    FLAG_terminate = false;
+    FLAG_terminate = 0;
     
     % Times in seconds
     total_time = .7;
     dt = .01;
     
-    kp1 = 0.5;
-    kp2 = 1000;
+    gains = [5, 10000;
+        0,0;
+        0,0];
+    speed_ext = [10,25]; % speeds were 15 70
+    lookahead = 2;
+    centerline_strength = 0.1;
+
+    % Gains
+    kp1 = gains(1,1);
+    ki1 = gains(2,1);
+    kd1 = gains(3,1);
+    kp2 = gains(1,2);
+    ki2 = gains(2,2);
+    kd2 = gains(3,2);
     
-    speed = 6;
+    %speed = 6;
     
     % Get cnormals
     n_elements = size(centerLine, 2);
@@ -21,42 +42,81 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     Cnormals = [0, 1; -1, 0] * projectors;
     Cnormals(:,n_elements) = Cnormals(:,n_elements - 1);
     
+    % Sum Error
+    sum_error = zeros(1,6);
+    prev_error = zeros(1,6);
+    U = [0, 0];
+    %Y_checking = [];
+    simulation_divergence = zeros(1,6);
+    
+    % Cline Distances
+    cline_distances = vecnorm(centerLine(:, 2:end) - centerLine(:, 1:end-1));
+    cline_distances(:,n_elements) = cline_distances(:,n_elements - 1);
+    d_ext = [min(cline_distances), max(cline_distances)];
+    
+    % d_theta
+    d_theta = 1./ abs(centerLineTheta(:, 2:end) - centerLineTheta(:, 1:end-1));
+    d_theta(:,n_elements) = d_theta(:,n_elements - 1);
+    d_theta_ext = [min(d_theta), max(d_theta)];
+    
+    
+    % Number of time steps
     nsteps = total_time/dt;
     
-    U = zeros(nsteps,2);
+    % Initialize inputs
+    %U = zeros(nsteps,2);
     
     for i=1:nsteps
-        nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);% + lookahead;
+        nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);
+        lookahead_goal_id = nearest_goal_id + lookahead;
+        if lookahead_goal_id > size(centerLine, 2)
+            lookahead_goal_id = size(centerLine, 2);
+        end
         disp("Tracking point (out of 246) and iteration: ");
         disp([nearest_goal_id, i]);
         nearest_goal = centerLine(:, nearest_goal_id);
-        goal_state = [nearest_goal(1), speed, nearest_goal(2), 0, 0, 0];
+        length_scale = (d_theta(:, nearest_goal_id) - d_theta_ext(1))/(d_theta_ext(2) - d_theta_ext(1));
+        goal_speed = length_scale * (speed_ext(2) - speed_ext(1)) + speed_ext(1);
+        goal_state = [nearest_goal(1), goal_speed, nearest_goal(2), 0, 0, 0];
         error = goal_state - curr_state;
-        goal_state(5) = centerLineTheta(:, nearest_goal_id) -.1*dot(Cnormals(:, nearest_goal_id), [error(1);error(3)], 1); %atan2(error(3),error(1));
+        goal_state(5) = centerLineTheta(:, lookahead_goal_id) -centerline_strength*dot(Cnormals(:, nearest_goal_id), [error(1);error(3)], 1); %atan2(error(3),error(1));
         error = goal_state - curr_state;
-        delta_f = kp1 * error(5);
+        sum_error = sum_error + error;
+        d_error = (error - prev_error)/0.01;
+        delta_f = kp1 * error(5) + ki1 * sum_error(5) + kd1 * d_error(5);
+        Fx = kp2 * error(2) + ki2 * sum_error(2) + kd2 * d_error(2);
         if delta_f > 0.5
             delta_f = 0.5;
         end
         if delta_f < -0.5
             delta_f = -0.5;
         end
-        Fx = kp2 * error(2);
         %Solve for trajectory
         T=(i-1)*0.01:0.01:i*0.01;
-        %U = [U;[delta_f, Fx]];
-        U(i,:) = [delta_f, Fx];
+        U = [U;[delta_f, Fx]];
+        %U(i,:) = [delta_f, Fx];
         
         U_sim = U(end-1:end, :);
-        x0 = curr_state;
-        [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,x0);
-        curr_state = Y(end,:);
-        
-        if close_to_end(curr_state,TestTrack)
-            FLAG_terminate = true;
+        if mod(i,1000) == 999
+            [Y,~]=forwardIntegrateControlInput(U,x0);
+            [~,Y1]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
+            %simulation_divergence = Y(end,:)-Y1(end,:);
+        else
+            [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
         end
-        
-        %Y_checking = [Y_checking; [curr_state, goal_state, error, ]];
+        curr_state = Y(end,:);
+        %Y_checking = [Y_checking; [curr_state, goal_state, error, simulation_divergence]];
+        prev_error = error;
+        if close_to_end(curr_state, TestTrack)
+            FLAG_terminate = 1;
+            %last_input = U(end,:);
+            last_input = [0, 4000]
+            for i = 1:1000
+                U = [U;last_input];
+            end
+            sol_2 = U;
+            break
+        end
     end
     
     sol_2 = U;
@@ -122,11 +182,11 @@ end
 
 
 function is_close = close_to_end(curr_state,TestTrack)
-    x = curr_state(1)
-    y = curr_state(3)
+    x = curr_state(1);
+    y = curr_state(3);
     last_point = TestTrack.cline(:,end);
     dist = norm(last_point-[x;y]);
-    is_close = ( dist < 1 );
+    is_close = ( dist < 2 );
 end
 
 % %function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack,Xobs_seen,curr_state)

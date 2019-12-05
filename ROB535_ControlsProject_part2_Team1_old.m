@@ -24,8 +24,9 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1_old (TestT
     nsteps = total_time/dt;
     
     U = zeros(nsteps,2);
+    %U(1,:) = [0 0]
     
-    for i=1:nsteps
+    for i=2:nsteps+1
         nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);% + lookahead;
         %disp("Tracking point (out of 246) and iteration: ");
         disp([nearest_goal_id, i]);
@@ -47,7 +48,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1_old (TestT
         %U = [U;[delta_f, Fx]];
         U(i,:) = [delta_f, Fx];
         
-        U_sim = U(end-1:end, :);
+        U_sim = U(i-1:i, :);
         x0 = curr_state;
         [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,x0);
         curr_state = Y(end,:);
@@ -59,7 +60,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1_old (TestT
         %Y_checking = [Y_checking; [curr_state, goal_state, error, ]];
     end
     
-    sol_2 = U;
+    sol_2 = U(2:end);
 
 end
 
