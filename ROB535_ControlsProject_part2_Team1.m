@@ -10,13 +10,14 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     FLAG_terminate = 0;
     
     % Times in seconds
-    total_time = .7;
+    total_time = .51;  % was .7
     dt = .01;
     
     gains = [5, 10000;
         0,0;
         0,0];
-    speed_ext = [10,25]; % speeds were 15 70
+    % speed_ext = [10,25]; % speeds were 15 70
+    speed_ext = [7, 15];
     lookahead = 2;
     centerline_strength = 0.1;
 
@@ -181,7 +182,7 @@ function is_close = close_to_end(curr_state,TestTrack)
     y = curr_state(3);
     last_point = TestTrack.cline(:,end);
     dist = norm(last_point-[x;y]);
-    is_close = ( dist < 3 );
+    is_close = ( dist < 10 ); % was 3
 end
 
 function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)

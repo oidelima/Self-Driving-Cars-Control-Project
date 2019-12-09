@@ -1,4 +1,4 @@
-function [Y,U,t_total,t_update] = forwardIntegrate()
+function [Y,U,t_total,t_update,Xobs] = forwardIntegrate()
 % [Y,U,t_total,t_update] = forwardIntegrate
 % 
 % This script returns the vehicle trajectory with control input being
@@ -40,7 +40,9 @@ function [Y,U,t_total,t_update] = forwardIntegrate()
     Y(1,:) = [287,5,-176,0,2,0];
 
     % generate obstacles along the track
-    Xobs = generateRandomObstacles(9 + randi(16),TestTrack);
+    % Xobs = generateRandomObstacles(9 + randi(16),TestTrack);
+    load Xobs_Q2.mat;
+    Xobs = Xobs_trail3;
 
     iteration = 1; % a counter that counts how many times the control input 
                    % generation function is called.
