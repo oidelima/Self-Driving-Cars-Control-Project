@@ -103,6 +103,10 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         curr_state = Y(end,:);
         %Y_checking = [Y_checking; [curr_state, goal_state, error, simulation_divergence]];
         prev_error = error;
+        if ((curr_state(1) > TestTrack.cline(1,end)) && (curr_state(3) > TestTrack.cline(2,end))) == 1
+            FLAG_terminate = 1;
+        end
+        %{
         if close_to_end(curr_state, TestTrack)
             FLAG_terminate = 1;
             %last_input = U(end,:);
@@ -113,6 +117,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
             sol_2 = U;
             %break
         end
+        %}
     end
     
     sol_2 = U;
