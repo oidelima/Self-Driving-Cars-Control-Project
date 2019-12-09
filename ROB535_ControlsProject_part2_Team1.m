@@ -106,12 +106,12 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         if close_to_end(curr_state, TestTrack)
             FLAG_terminate = 1;
             %last_input = U(end,:);
-            last_input = [0, 4000];
-            for i = 1:100
+            last_input = [0, 4000]; % was 0,4000
+            for i = 1:6000
                 U = [U;last_input];
             end
             sol_2 = U;
-            break
+            %break
         end
     end
     
