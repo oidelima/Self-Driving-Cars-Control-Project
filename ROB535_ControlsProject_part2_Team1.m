@@ -1,11 +1,6 @@
 function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack,Xobs_seen,curr_state)
 
     
-    closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
-    
-    centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
-    
-    
     centerLineTheta = TestTrack.theta;
     FLAG_terminate = 0;
     
@@ -17,7 +12,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         0,0;
         0,0];
     % speed_ext = [10,25]; % speeds were 15 70
-    speed_ext = [7, 15];
+    speed_ext = [10, 10]; % [6,10] % [7,15]
     lookahead = 2;
     centerline_strength = 0.1;
 
@@ -29,28 +24,14 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     ki2 = gains(2,2);
     kd2 = gains(3,2);
     
-    %speed = 6;
-    
-    % Get cnormals
-    n_elements = size(centerLine, 2);
-    projectors = (centerLine(:,2:n_elements) - centerLine(:,1:n_elements-1));
-    projectors = projectors ./ vecnorm(projectors);
-    Cnormals = [0, 1; -1, 0] * projectors;
-    Cnormals(:,n_elements) = Cnormals(:,n_elements - 1);
     
     % Sum Error
     sum_error = zeros(1,6);
     prev_error = zeros(1,6);
     U = [0, 0];
-    %Y_checking = [];
-    simulation_divergence = zeros(1,6);
-    
-    % Cline Distances
-    cline_distances = vecnorm(centerLine(:, 2:end) - centerLine(:, 1:end-1));
-    cline_distances(:,n_elements) = cline_distances(:,n_elements - 1);
-    d_ext = [min(cline_distances), max(cline_distances)];
-    
-    % d_theta
+
+    n_elements = size(TestTrack.cline, 2);
+%     % d_theta
     d_theta = 1./ abs(centerLineTheta(:, 2:end) - centerLineTheta(:, 1:end-1));
     d_theta(:,n_elements) = d_theta(:,n_elements - 1);
     d_theta_ext = [min(d_theta), max(d_theta)];
@@ -59,17 +40,33 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     % Number of time steps
     nsteps = total_time/dt;
     
-    % Initialize inputs
-    %U = zeros(nsteps,2);
+    % Get intial line to track from obstacles
+    closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+    centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
+    Cnormals = get_Cnormals(centerLine);
     
     for i=1:nsteps
+        
+        % Update previous values to avoid extra calculations
+        last_closest_obs_center = closest_obstacle_center;
+        last_centerLine = centerLine;
+        
+        % Get new closest obstacle and update lane and cnormals if
+        % necessary
+        closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+        if last_closest_obs_center ~= closest_obstacle_center
+            centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
+            if last_centerLine ~= centerLine
+                Cnormals = get_Cnormals(centerLine);
+            end
+        end
+
+        
         nearest_goal_id = knnsearch(centerLine', [curr_state(1), curr_state(3)]);
         lookahead_goal_id = nearest_goal_id + lookahead;
         if lookahead_goal_id > size(centerLine, 2)
             lookahead_goal_id = size(centerLine, 2);
         end
-        %disp("Tracking point (out of 246) and iteration: ");
-        %disp([nearest_goal_id, i]);
         nearest_goal = centerLine(:, nearest_goal_id);
         length_scale = (d_theta(:, nearest_goal_id) - d_theta_ext(1))/(d_theta_ext(2) - d_theta_ext(1));
         goal_speed = length_scale * (speed_ext(2) - speed_ext(1)) + speed_ext(1);
@@ -90,34 +87,18 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         %Solve for trajectory
         T=(i-1)*0.01:0.01:i*0.01;
         U = [U;[delta_f, Fx]];
-        %U(i,:) = [delta_f, Fx];
         
         U_sim = U(end-1:end, :);
         if mod(i,1000) == 999
             [Y,~]=forwardIntegrateControlInput(U,x0);
-            [~,Y1]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
-            %simulation_divergence = Y(end,:)-Y1(end,:);
         else
             [~,Y]=ode45(@(t,x)bike(t,x,T,U_sim),T,curr_state);
         end
         curr_state = Y(end,:);
-        %Y_checking = [Y_checking; [curr_state, goal_state, error, simulation_divergence]];
         prev_error = error;
         if ((curr_state(1) > TestTrack.cline(1,end)) && (curr_state(3) > TestTrack.cline(2,end))) == 1
             FLAG_terminate = 1;
         end
-        %{
-        if close_to_end(curr_state, TestTrack)
-            FLAG_terminate = 1;
-            %last_input = U(end,:);
-            last_input = [0, 4000]; % was 0,4000
-            for i = 1:6000
-                U = [U;last_input];
-            end
-            sol_2 = U;
-            %break
-        end
-        %}
     end
     
     sol_2 = U;
@@ -182,12 +163,12 @@ dzdt= [x(2)*cos(x(5))-x(4)*sin(x(5));...
 end
 
 
-function is_close = close_to_end(curr_state,TestTrack)
-    x = curr_state(1);
-    y = curr_state(3);
-    last_point = TestTrack.cline(:,end);
-    dist = norm(last_point-[x;y]);
-    is_close = ( dist < 10 ); % was 3
+function Cnormals = get_Cnormals(centerLine)
+    n_elements = size(centerLine, 2);
+    projectors = (centerLine(:,2:n_elements) - centerLine(:,1:n_elements-1));
+    projectors = projectors ./ vecnorm(projectors);
+    Cnormals = [0, 1; -1, 0] * projectors;
+    Cnormals(:,n_elements) = Cnormals(:,n_elements - 1);
 end
 
 function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)
@@ -206,8 +187,8 @@ function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)
                 closest_obstacle_center = obstacle_center;
             end
         end
-        hold on;
-        scatter(closest_obstacle_center(1), closest_obstacle_center(2));
+        %hold on;
+        %scatter(closest_obstacle_center(1), closest_obstacle_center(2));
     end
 end
 

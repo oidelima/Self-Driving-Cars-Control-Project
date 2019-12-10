@@ -6,7 +6,10 @@ ylim2 = 825;
 plot(Y(:,1), Y(:,3), '.r')
 hold on
 load TestTrack.mat
-for i=1:24
+
+num_cells = numel(Xobs);
+
+for i=1:num_cells
     obs = Xobs{i};
     obs = [obs;obs(1,:)];
     plot(obs(:,1),obs(:,2))
