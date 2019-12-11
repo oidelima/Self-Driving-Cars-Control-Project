@@ -1,5 +1,6 @@
 function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack,Xobs_seen,curr_state)
 
+    cline_interp = interp_cline(TestTrack.cline,2);
     
     centerLineTheta = TestTrack.theta;
     FLAG_terminate = 0;
@@ -12,7 +13,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         0,0;
         0,0];
     % speed_ext = [10,25]; % speeds were 15 70
-    speed_ext = [10, 10]; % [6,10] % [7,15]
+    speed_ext = [11, 14]; % [10,10] worked %  [6,10] % [7,15]
     lookahead = 2;
     centerline_strength = 0.1;
 
@@ -41,7 +42,8 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
     nsteps = total_time/dt;
     
     % Get intial line to track from obstacles
-    closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+    %closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+    closest_obstacle_center = get_next_obstacle(curr_state,Xobs_seen,cline_interp);
     centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
     Cnormals = get_Cnormals(centerLine);
     
@@ -53,7 +55,8 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         
         % Get new closest obstacle and update lane and cnormals if
         % necessary
-        closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+        %closest_obstacle_center = get_closest_obstacle(curr_state,Xobs_seen);
+        closest_obstacle_center = get_next_obstacle(curr_state,Xobs_seen,cline_interp);
         if last_closest_obs_center ~= closest_obstacle_center
             centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack);
             if last_centerLine ~= centerLine
@@ -187,9 +190,35 @@ function closest_obstacle_center = get_closest_obstacle(curr_state, Xobs_seen)
                 closest_obstacle_center = obstacle_center;
             end
         end
+        
         %hold on;
         %scatter(closest_obstacle_center(1), closest_obstacle_center(2));
     end
+end
+
+function next_obstacle_center = get_next_obstacle(curr_state, Xobs_seen, cline_interp)
+    num_cells = numel(Xobs_seen);
+    next_obstacle_center = [0;0];
+    if num_cells == 0
+        %closest_obstacle_center = [0;0];
+        %disp("NO CELLS!");
+    else
+        %centerLine = TestTrack.cline;
+        centerLine = cline_interp;
+        nearest_id_state = knnsearch(centerLine', [curr_state(1), curr_state(3)]);
+        min_diff = 999999;
+        for i = 1:num_cells
+            obstacle = Xobs_seen{i};
+            obstacle_center = mean(obstacle)';
+            nearest_id_obs = knnsearch(centerLine', [obstacle_center(1), obstacle_center(2)]);
+            id_diff = nearest_id_obs - nearest_id_state;
+            if id_diff >= 0 && id_diff < min_diff
+                next_obstacle_center = obstacle_center;
+                min_diff = id_diff;
+            end
+        end
+    end
+
 end
 
 function centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack)
@@ -222,4 +251,16 @@ function centerLine = get_lane_from_obstacle_center( closest_obstacle_center, Te
     end
 end
 
-
+function cline_interp = interp_cline(cline, num_interpl)
+    N = size(cline,2);
+    step_size = 1/num_interpl;
+    
+    x_points = cline(1,:);
+    y_points = cline(2,:);
+    new_ind = 1:step_size:N;
+    
+    x_interp = interp1(x_points, new_ind);
+    y_interp = interp1(y_points, new_ind);
+    
+    cline_interp = [x_interp;y_interp];
+end
