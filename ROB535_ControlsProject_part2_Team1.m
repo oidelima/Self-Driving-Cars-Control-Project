@@ -13,7 +13,7 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         0,0;
         0,0];
     % speed_ext = [10,25]; % speeds were 15 70
-    speed_ext = [12, 16]; % [11, 14]; % [10,10] worked %  [6,10] % [7,15]
+    speed_ext = [11, 14.5]; % [11, 14]; % [10,10] worked %  [6,10] % [7,15]
     lookahead = 2;
     centerline_strength = 0.1;
 
@@ -223,7 +223,7 @@ end
 
 function centerLine = get_lane_from_obstacle_center( closest_obstacle_center, TestTrack)
     if closest_obstacle_center == [0;0]
-        disp("Center")
+        %disp("Center")
         centerLine = TestTrack.cline;
     else
         
@@ -242,10 +242,10 @@ function centerLine = get_lane_from_obstacle_center( closest_obstacle_center, Te
         % positive = RHS
         % negative = LHS
         if sign_check >= 0
-            disp("Right")
+            %disp("Right")
             centerLine = (TestTrack.br + TestTrack.cline)./2;
         else
-            disp("Left")
+            %disp("Left")
             centerLine = (TestTrack.bl + TestTrack.cline)./2;
         end
     end
