@@ -12,6 +12,7 @@ while ~flag_terminate
         avg_time = total_time / num_successful_runs
         %disp(info.t_score)
     else
+        disp(info.percent_of_track_completed)
         flag_terminate = true;
         plotPart2
     end

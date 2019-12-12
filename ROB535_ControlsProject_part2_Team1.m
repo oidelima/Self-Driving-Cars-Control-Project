@@ -13,7 +13,9 @@ function [sol_2, FLAG_terminate] = ROB535_ControlsProject_part2_Team1 (TestTrack
         0,0;
         0,0];
     % speed_ext = [10,25]; % speeds were 15 70
-    speed_ext = [11, 14.5]; % [11, 14]; % [10,10] worked %  [6,10] % [7,15]
+    %speed_ext = [10, 15]; % [11, 14]; % [10,10] worked %  [6,10] % [7,15]
+    
+    speed_ext = [11,14]; % 11,13
     lookahead = 2;
     centerline_strength = 0.1;
 
