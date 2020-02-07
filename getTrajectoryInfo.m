@@ -1,4 +1,4 @@
-function info = getTrajectoryInfo(Y,U,Xobs,TestTrack)
+function info = getTrajectoryInfo(Y,U,Xobs,t_update,TestTrack)
 % info = getTrajectoryInfo(Y,U,Xobs)
 %
 % Given a trajectory, input, and a cell array of obstacles, return
@@ -12,7 +12,7 @@ function info = getTrajectoryInfo(Y,U,Xobs,TestTrack)
 % INPUTS:
 %   Y           an N-by-2 trajectory in the x and y coordinates of the
 %               vehicle's states, where the first column is x and the
-%               second column is y OR an N-by-6 trajectory in the full
+%                second column is y OR an N-by-6 trajectory in the full
 %               state, where the first column is x and the third column is
 %               y
 %
@@ -29,6 +29,9 @@ function info = getTrajectoryInfo(Y,U,Xobs,TestTrack)
 %   TestTrack   a TestTrack object for which TestTrack.cline is the
 %               centerline (this is an optional argument; the function will
 %               by default try to load the provided TestTrack.mat file)
+%
+%   t_update    a M-by-1 vector of time that records the time consumption
+%               when the control input generation function is called
 %
 % OUTPUTS:
 %   info        a struct containing the following catergories 
@@ -79,8 +82,14 @@ function info = getTrajectoryInfo(Y,U,Xobs,TestTrack)
 %               complete prior to leaving the track, hitting an obstacle,
 %               or the control inputs end.
 %
+%               info.t_score : Score of computational time as 
+%                      info.t_finished + M * max(num_exceed_time_limit,0),
+%               where M(=10) is some penalty value, num_exceed_time_limit
+%               is the number of elements in t_update that are longer than
+%               0.5 second. An empty vector is returned if finish line is 
+%               not crossed.
+%
 % Written by: Shreyas Kousik and Matthew Porter
 % Created: 14 Dec 2017
 % Modified: 24 Oct 2018 
-end
-            
+% Modified: 22 Nov 2019 (JL)

@@ -33,7 +33,8 @@ T=0:0.01:(size(U,1)-1)*0.01;
 
 
 %Solve for trajectory      
-[~,Y]=ode45(@(t,x)bike(t,x,T,U),T,x0);
+options = odeset('MaxStep',0.01);
+[~,Y]=ode45(@(t,x)bike(t,x,T,U),T,x0,options);
 end
 
 function dzdt=bike(t,x,T,U)
